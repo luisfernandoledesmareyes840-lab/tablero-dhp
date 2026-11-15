@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tablero Digital Interactivo - Proyecto Aula DHP I</title>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #475569;
+      --p1: #0284c7;       /* Primer Parcial: Azul */
+      --p1-light: #e0f2fe;
+      --p2: #db2777;       /* Segundo Parcial: Rosa */
+      --p2-light: #fce7f3;
+      --p3: #d97706;       /* Tercer Parcial: Ámbar/Amarillo */
+      --p3-light: #fef3c7;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --border: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      color: #fff;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    header h1 { margin: 0 0 0.35rem; font-size: 1.7rem; letter-spacing: 0.3px; }
+    header p { margin: 0.2rem 0; color: #cbd5e1; font-size: 0.95rem; }
+    .badge-tema {
+      display: inline-block;
+      margin-top: 0.6rem;
+      background: #facc15;
+      color: #0f172a;
+      font-weight: 700;
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+      font-size: 0.95rem;
+    }
+
+    .container { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; }
+
+    /* Barra de herramientas y estado */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      padding: 1rem 1.25rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+
+    .nav-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 0.95rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: transform 0.12s ease, opacity 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); opacity: 0.92; }
+    .btn-primary { background: #1d4ed8; color: #fff; }
+    .btn-secondary { background: #e2e8f0; color: #0f172a; }
+    .btn-dice { background: #16a34a; color: #fff; font-size: 0.95rem; }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    .stat-pill {
+      background: #f1f5f9;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    /* Leyenda de parciales */
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .legend-item {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      border-left: 6px solid;
+      font-size: 0.88rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .l-p1 { border-color: var(--p1); background: var(--p1-light); }
+    .l-p2 { border-color: var(--p2); background: var(--p2-light); }
+    .l-p3 { border-color: var(--p3); background: var(--p3-light); }
+
+    /* Cuadrícula del Tablero de 30 casillas */
+    .board-wrapper {
+      background: var(--card);
+      padding: 1.25rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .tile {
+      position: relative;
+      border-radius: 12px;
+      padding: 0.85rem;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 125px;
+      background: #fff;
+    }
+    .tile:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.1); }
+    .tile.p1 { border-color: var(--p1); background: linear-gradient(180deg, var(--p1-light) 0%, #ffffff 45%); }
+    .tile.p2 { border-color: var(--p2); background: linear-gradient(180deg, var(--p2-light) 0%, #ffffff 45%); }
+    .tile.p3 { border-color: var(--p3); background: linear-gradient(180deg, var(--p3-light) 0%, #ffffff 45%); }
+
+    .tile.current { outline: 4px solid #16a34a; outline-offset: 2px; }
+    .tile.completed { opacity: 0.88; }
+    .tile.completed::after {
+      content: "✓ Resuelta";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--success);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .tile-num {
+      font-weight: 800;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .tile-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+      color: var(--muted);
+    }
+    .tile-title {
+      font-size: 0.86rem;
+      font-weight: 600;
+      margin-top: 0.35rem;
+      color: var(--text);
+    }
+
+    .special-tile {
+      background: #0f172a !important;
+      color: #fff !important;
+      border-color: #0f172a !important;
+      cursor: default;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .special-tile .tile-title { color: #facc15; font-size: 1rem; }
+
+    /* Modales */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      max-width: 680px;
+      width: 100%;
+      border-radius: 16px;
+      padding: 1.5rem;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 35px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .modal-header h2 { margin: 0; font-size: 1.2rem; }
+    .close-btn { background: #e2e8f0; color: #0f172a; padding: 0.35rem 0.7rem; border-radius: 6px; }
+
+    .process-box {
+      background: #f8fafc;
+      border-left: 4px solid #1d4ed8;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .question-text { font-weight: 600; font-size: 1.02rem; margin-bottom: 1rem; }
+
+    .options-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .option-btn {
+      text-align: left;
+      background: #f8fafc;
+      border: 2px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 0.93rem;
+    }
+    .option-btn:hover:not(:disabled) { border-color: #1d4ed8; background: #eff6ff; }
+    .option-btn.correct { border-color: var(--success); background: #dcfce7; color: #14532d; font-weight: 700; }
+    .option-btn.wrong { border-color: var(--danger); background: #fee2e2; color: #7f1d1d; }
+
+    .feedback-box {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 10px;
+      font-size: 0.92rem;
+    }
+    .feedback-box.show { display: block; }
+    .feedback-box.ok { background: #dcfce7; border: 1px solid #86efac; color: #14532d; }
+    .feedback-box.bad { background: #fef2f2; border: 1px solid #fecaca; color: #7f1d1d; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Tablero Digital Interactivo · Proyecto Aula</h1>
+  <p>Unidad de Aprendizaje: Desarrollo de Habilidades del Pensamiento I · IPN CECyT 13</p>
+  <div class="badge-tema" id="headerTema">Problemática: Prevención de la Presión Social en la Adolescencia</div>
+</header>
+
+<div class="container">
+  <div class="toolbar">
+    <div class="nav-btns">
+      <button class="btn-primary" onclick="openInfoModal('objetivo')">Objetivo</button>
+      <button class="btn-primary" onclick="openInfoModal('instrucciones')">Instrucciones y Reglas</button>
+      <button class="btn-secondary" onclick="openInfoModal('creditos')">Créditos</button>
+      <button class="btn-dice" onclick="rollDice()">🎲 Tirar Dado (Avance)</button>
+      <button class="btn-secondary" onclick="resetGame()">Reiniciar</button>
+    </div>
+    <div class="stats">
+      <div class="stat-pill">📍 Casilla actual: <span id="statPos">Inicio</span></div>
+      <div class="stat-pill">✅ Completadas: <span id="statDone">0</span> / 30</div>
+      <div class="stat-pill">⭐ Puntuación: <span id="statScore">0</span> pts</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item l-p1">
+      <strong>Primer Parcial (Casillas 1–8):</strong> Fundamentos del pensamiento, elementos, hemisferios, lóbulos, cerebro triuno y tipos de pensamiento.
+    </div>
+    <div class="legend-item l-p2">
+      <strong>Segundo Parcial (Casillas 9–20):</strong> Acto mental (Input-Process-Output) y procesos/habilidades cognitivas básicas y superiores.
+    </div>
+    <div class="legend-item l-p3">
+      <strong>Tercer Parcial (Casillas 21–30):</strong> Creatividad, factores de Guilford, bloqueadores, proceso creativo y toma de decisiones.
+    </div>
+  </div>
+
+  <div class="board-wrapper">
+    <div class="board-grid" id="boardGrid"></div>
+  </div>
+</div>
+
+<footer>
+  Evidencia Integradora Final del Semestre · DHP I · 30 Casillas Interactivas con Retroalimentación Fundamentada
+</footer>
+
+<!-- Modal de Reto -->
+<div class="modal-backdrop" id="challengeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <span id="mParcial" style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:#1d4ed8;"></span>
+        <h2 id="mTitle"></h2>
+      </div>
+      <button class="close-btn" onclick="closeModal('challengeModal')">✕ Cerrar</button>
+    </div>
+    <div class="process-box" id="mProcess"></div>
+    <div class="question-text" id="mQuestion"></div>
+    <div class="options-list" id="mOptions"></div>
+    <div class="feedback-box" id="mFeedback"></div>
+  </div>
+</div>
+
+<!-- Modal Informativo -->
+<div class="modal-backdrop" id="infoModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="infoTitle"></h2>
+      <button class="close-btn" onclick="closeModal('infoModal')">✕ Cerrar</button>
+    </div>
+    <div id="infoBody"></div>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // CONFIGURACIÓN PERSONALIZABLE (Edita aquí si tu grupo tiene otro título)
+  // =========================================================================
+  const TEMA_PROYECTO_AULA = "Prevención de la Presión Social en la Adolescencia";
+  const AUTOR_PROYECTO = "Luis Fernando Ledesma Reyes";
+  const GRUPO_INSTITUCION = "1er Semestre · CECyT 13 'Ricardo Flores Magón' - IPN";
+
+  document.getElementById("headerTema").textContent = "Problemática: " + TEMA_PROYECTO_AULA;
+
+  // =========================================================================
+  // BANCO DE 30 CASILLAS (8 Parcial 1 + 12 Parcial 2 + 10 Parcial 3)
+  // Basado estrictamente en el manual DHP I proporcionado
+  // =========================================================================
+  const CASILLAS = [
+    // --- PRIMER PARCIAL (1 a 8) ---
+    {
+      num: 1, parcial: "Primer Parcial", clase: "p1",
+      tema: "Definición de Pensamiento (Kantor, 1924 / RAE, 2022)",
+      proceso: "Fundamento aplicado: Pensar es formar o combinar ideas o juicios en la mente y examinar mentalmente algo con atención antes de actuar (manipulación manifiesta e implícita de situaciones como procesos preliminares).",
+      pregunta: `Ante la problemática "${TEMA_PROYECTO_AULA}", un grupo te exige consumir una sustancia en una fiesta. ¿Qué acción demuestra el ejercicio del pensamiento según Kantor (1924) y la RAE (2022)?`,
+      opciones: [
+        "Aceptar de inmediato sin examinar la situación para no quedar mal.",
+        "Examinar mentalmente la situación con atención y anticipar sus consecuencias antes de emitir una conducta.",
+        "Reaccionar por impulso físico sin formar ningún juicio previo."
+      ],
+      correcta: 1,
+      retro: "Correcto. Para Kantor (1924), el pensamiento consiste en procesos preliminares anticipatorios que preparan el ajuste ante una situación compleja, examinando mentalmente los hechos para formar un juicio (RAE, 2022)."
+    },
+    {
+      num: 2, parcial: "Primer Parcial", clase: "p1",
+      tema: "Elementos del Pensamiento (Morris & Maisto, 2005)",
+      proceso: "Fundamento aplicado: Los tres elementos principales de construcción del pensamiento son la imagen (representación mental no verbal), el concepto (categoría mental para agrupar) y el lenguaje (sistema flexible de símbolos).",
+      pregunta: `Cuando un adolescente escucha el término "presión de grupo" dentro de "${TEMA_PROYECTO_AULA}", lo clasifica dentro de situaciones de riesgo social y expresa su postura con palabras firmes. ¿Qué elementos del pensamiento empleó en ese orden?`,
+      opciones: [
+        "Concepto (categorización de la experiencia) y Lenguaje (sistema de símbolos para comunicar soluciones).",
+        "Únicamente imágenes olfativas sin significado.",
+        "Solo reflejos medulares automáticos."
+      ],
+      correcta: 0,
+      retro: "Exacto. Según Morris & Maisto (2005), los conceptos agrupan experiencias en categorías apropiadas y el lenguaje humano permite codificar significados y comunicar soluciones frente a un problema."
+    },
+    {
+      num: 3, parcial: "Primer Parcial", clase: "p1",
+      tema: "Hemisferios Cerebrales y Cuerpo Calloso",
+      proceso: "Fundamento aplicado: El hemisferio izquierdo (cerebro digital) es verbal, analítico, lógico y secuencial; el hemisferio derecho (cerebro analógico) es visual, intuitivo y creativo; ambos se comunican mediante el cuerpo calloso.",
+      pregunta: `Para resolver un dilema de "${TEMA_PROYECTO_AULA}", analizas secuencialmente los hechos reales con tu hemisferio izquierdo e imaginas salidas creativas con tu hemisferio derecho. ¿Qué estructura permite el trabajo conjunto de ambos hemisferios?`,
+      opciones: [
+        "La médula espinal.",
+        "El cuerpo calloso (haz de fibras nerviosas que une ambos hemisferios).",
+        "La glándula pituitaria."
+      ],
+      correcta: 1,
+      retro: "Muy bien. El cuerpo calloso es la autopista de información que conecta el hemisferio izquierdo (lógico/analítico) con el derecho (intuitivo/creativo), permitiendo su integración."
+    },
+    {
+      num: 4, parcial: "Primer Parcial", clase: "p1",
+      tema: "Lóbulos Cerebrales (Frontal, Parietal, Temporal, Occipital)",
+      proceso: "Fundamento aplicado: El lóbulo frontal (delante de la cisura de Rolando) rige las funciones ejecutivas como el razonamiento, la toma de decisiones, el autocontrol y la resolución de problemas.",
+      pregunta: `En una situación de "${TEMA_PROYECTO_AULA}" donde debes mantener el autocontrol, razonar y tomar una decisión responsable frente a tus compañeros, ¿qué lóbulo cerebral lidera estas funciones ejecutivas?`,
+      opciones: [
+        "Lóbulo occipital (encargado de estímulos visuales).",
+        "Lóbulo temporal (audición y Área de Wernicke).",
+        "Lóbulo frontal (centro de control ejecutivo, autocontrol y toma de decisiones)."
+      ],
+      correcta: 2,
+      retro: "Correcto. El lóbulo frontal se encarga de las funciones cognitivas complejas y ejecutivas: planificación, control de la conducta, razonamiento, autocontrol y toma de decisiones."
+    },
+    {
+      num: 5, parcial: "Primer Parcial", clase: "p1",
+      tema: "Cerebro Triuno (Dr. Paul MacLean)",
+      proceso: "Fundamento aplicado: Divide al encéfalo en Cerebro réptil (instinto y supervivencia), Cerebro límbico (emociones: amígdala, hipocampo, tálamo, hipotálamo, hipófisis) y Neocorteza/Neocórtex (razonamiento lógico, abstracción y control conductual).",
+      pregunta: `Ante una burla por negarte a seguir una moda peligrosa en "${TEMA_PROYECTO_AULA}", el cerebro límbico activa emociones como miedo o vergüenza. ¿Qué estructura del cerebro triuno permite regular esa emoción mediante autorreflexión y razonamiento lógico?`,
+      opciones: [
+        "La neocorteza o neocórtex.",
+        "El bulbo raquídeo.",
+        "El mesencéfalo."
+      ],
+      correcta: 0,
+      retro: "Acertado. Mientras el sistema límbico media las emociones, la neocorteza permite observación, reflexión, razonamiento lógico y control conductual."
+    },
+    {
+      num: 6, parcial: "Primer Parcial", clase: "p1",
+      tema: "Pensamiento Analítico y sus 3 Fases",
+      proceso: "Fundamento aplicado: Descomposición de un todo en sus elementos constitutivos mediante tres fases: Fase analítica (segmentar en partes), Fase secuencial (estudio lineal sin saltos) y Fase resolutiva (reorganización para obtener resultados).",
+      pregunta: `Para estudiar las causas de "${TEMA_PROYECTO_AULA}" en tu escuela, primero divides el problema en factores familiares, escolares y redes sociales; luego estudias cada parte ordenadamente y finalmente diseñas un plan de acción. ¿Qué fases del pensamiento analítico aplicaste?`,
+      opciones: [
+        "Fase analítica, fase secuencial y fase resolutiva.",
+        "Únicamente intuición y azar.",
+        "Fase emocional y fase de huida."
+      ],
+      correcta: 0,
+      retro: "Excelente. El pensamiento analítico se fundamenta en evidencias y sigue exactamente esas tres fases: analítica (segmentación), secuencial (estudio lineal) y resolutiva (reorganización)."
+    },
+    {
+      num: 7, parcial: "Primer Parcial", clase: "p1",
+      tema: "Pensamiento Crítico (Bezanilla et al., 2018)",
+      proceso: "Fundamento aplicado: Involucra analizar/organizar, razonar/argumentar, cuestionar/preguntarse, evaluar, posicionarse/tomar decisiones y actuar/comprometerse, evitando creencias irracionales o sin sustento.",
+      pregunta: `En redes sociales circula un reto viral peligroso vinculado a "${TEMA_PROYECTO_AULA}" con el argumento falso de que "no tiene consecuencias". ¿Qué característica del pensamiento crítico debes aplicar primero?`,
+      opciones: [
+        "Creerlo por presión emocional.",
+        "Cuestionar/preguntarse y evaluar las evidencias indagando en fuentes confiables antes de posicionarse.",
+        "Repetir el reto para comprobarlo sin analizar."
+      ],
+      correcta: 1,
+      retro: "Correcto. El pensamiento crítico exige cuestionar asuntos comúnmente aceptados, evaluar hechos con criterios objetivos y no dejarse llevar por emociones o creencias sin estudio."
+    },
+    {
+      num: 8, parcial: "Primer Parcial", clase: "p1",
+      tema: "Pensamiento Deductivo vs. Pensamiento Inductivo",
+      proceso: "Fundamento aplicado: El deductivo va de afirmaciones generales a específicas mediante argumentos válidos; el inductivo parte de casos particulares observados para formular una generalización o hipótesis.",
+      pregunta: `Si observas 5 casos particulares en tu salón donde los alumnos cedieron a la presión de grupo y bajaron su rendimiento escolar, y concluyes la hipótesis general de que "${TEMA_PROYECTO_AULA}" afecta el desempeño académico, ¿qué tipo de pensamiento empleaste?`,
+      opciones: [
+        "Pensamiento deductivo (de lo general a lo particular).",
+        "Pensamiento inductivo (de casos particulares a una generalización probable).",
+        "Pensamiento vertical rígido."
+      ],
+      correcta: 1,
+      retro: "Muy bien. El pensamiento inductivo va de la parte al todo: parte de observaciones particulares para construir una generalización o hipótesis científica."
+    },
+
+    // --- SEGUNDO PARCIAL (9 a 20) ---
+    {
+      num: 9, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Teoría Computacional de la Mente / Acto Mental (1955)",
+      proceso: "Proceso cognitivo aplicado: El procesamiento de información consta de 3 etapas: Fase de entrada o Input (recepción de datos por los sentidos), Fase de elaboración o Process (codificación y análisis con memoria y reglas) y Fase de salida o Output (ejecución de respuesta).",
+      pregunta: `Al enfrentar un conflicto de "${TEMA_PROYECTO_AULA}", escuchas los argumentos de tus amigos (Input), los comparas con tus valores y experiencias previas (Process) y expresas asertivamente tu negativa (Output). ¿Qué ocurre si hay fallas en la fase de entrada o elaboración?`,
+      opciones: [
+        "El resultado esperado siempre será exitoso.",
+        "Lo más probable es que haya fallas en el cumplimiento de los objetivos en la fase de salida (Output).",
+        "No se requiere ninguna información del entorno."
+      ],
+      correcta: 1,
+      retro: "Exacto. Según la teoría computacional de la mente, si existen deficiencias al recabar datos (Input) o al procesarlos con reglas y memoria (Elaboración), la respuesta conductual (Output) fallará."
+    },
+    {
+      num: 10, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Sensación (Proceso Cognitivo Inferior o Básico)",
+      proceso: "Proceso cognitivo aplicado: Las sensaciones son datos inmediatos provocados por los diversos estímulos del entorno o del propio cuerpo que nos llegan a través de los sentidos.",
+      pregunta: `Durante una discusión tensa relacionada con "${TEMA_PROYECTO_AULA}", sientes aceleración del ritmo cardíaco y escuchas el tono de voz elevado de tus compañeros. ¿A qué proceso cognitivo básico corresponden estos datos inmediatos captados por los sentidos?`,
+      opciones: [
+        "Sensación (datos inmediatos recibidos del ambiente o del propio cuerpo).",
+        "Metacognición.",
+        "Razonamiento hipotético-deductivo."
+      ],
+      correcta: 0,
+      retro: "Correcto. La sensación recoge los datos inmediatos de los estímulos externos o internos a través de los órganos sensoriales antes de ser interpretados."
+    },
+    {
+      num: 11, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Percepción y Psicología de la Gestalt",
+      proceso: "Proceso cognitivo aplicado: La percepción implica la interpretación de los elementos percibidos otorgándoles significado con base en nuestras experiencias previas ('el todo es mayor que la suma de sus partes').",
+      pregunta: `Dos adolescentes observan la misma invitación a una fiesta riesgosa vinculada a "${TEMA_PROYECTO_AULA}": uno la interpreta como diversión y otro como peligro por una experiencia previa. ¿Qué proceso mental explica esta diferencia de significado?`,
+      opciones: [
+        "Percepción (interpretación activa de los estímulos basada en experiencias previas).",
+        "Sensación pura sin interpretación.",
+        "Memoria sensorial mecánica."
+      ],
+      correcta: 0,
+      retro: "Acertado. Mientras la sensación capta el estímulo, la percepción le otorga significado utilizando nuestras experiencias previas como seres activos."
+    },
+    {
+      num: 12, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Atención (Proceso Cognitivo Básico y Habilidad Cognitiva)",
+      proceso: "Proceso cognitivo aplicado: Capacidad de focalizar nuestros recursos cognitivos en estímulos relevantes, sostenerla, dividirla y orientarnos ante posibles amenazas.",
+      pregunta: `Cuando expones tu postura sobre "${TEMA_PROYECTO_AULA}" frente a un grupo exigente, debes centrarte al máximo en medir tus palabras y tu lenguaje corporal ignorando distracciones. ¿Qué proceso cognitivo estás ejerciendo?`,
+      opciones: [
+        "Automatización inconsciente.",
+        "Atención dirigida y sostenida hacia estímulos relevantes.",
+        "Distorsión cognitiva."
+      ],
+      correcta: 1,
+      retro: "Correcto. La atención permite focalizar y sostener los recursos cognitivos en función de nuestros intereses y reaccionar adecuadamente ante situaciones demandantes."
+    },
+    {
+      num: 13, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Memoria (Sensorial, Corto Plazo, De Trabajo, Largo Plazo)",
+      proceso: "Proceso cognitivo aplicado: Permite codificar, almacenar y recuperar datos; incluye memoria sensorial, a corto plazo, de trabajo (manipulación inmediata para razonar), semántica y autobiográfica (largo plazo).",
+      pregunta: `En medio de un debate sobre "${TEMA_PROYECTO_AULA}", retienes temporalmente el argumento que acaba de decir tu compañero mientras lo analizas mentalmente para responderle. ¿Qué tipo de memoria estás utilizando?`,
+      opciones: [
+        "Memoria de trabajo (retención y manipulación inmediata para razonar y comprender).",
+        "Memoria sensorial de duración mínima.",
+        "Amnesia retrógrada."
+      ],
+      correcta: 0,
+      retro: "Muy bien. La memoria de trabajo permite retener y manipular información en el momento presente para razonar, comprender y tomar decisiones."
+    },
+    {
+      num: 14, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Inteligencia (Inteligencias Múltiples de Gardner e Inteligencia Emocional)",
+      proceso: "Proceso cognitivo aplicado: Gardner sostiene que existen diversas capacidades (intrapersonal, lingüística, lógico-matemática, musical, etc.), y actualmente se enfatiza la inteligencia emocional para manejar las coyunturas del día a día.",
+      pregunta: `Un estudiante reconoce sus propias emociones (inteligencia intrapersonal) y maneja con calma la frustración cuando un grupo intenta excluirlo en el contexto de "${TEMA_PROYECTO_AULA}". ¿Qué tipo de inteligencia resulta esencial para manejar estas coyunturas diarias?`,
+      opciones: [
+        "Inteligencia emocional e intrapersonal.",
+        "Únicamente un test estático de cociente intelectual.",
+        "Inteligencia exclusivamente musical."
+      ],
+      correcta: 0,
+      retro: "Exacto. El manual destaca que la inteligencia no es un número estático de CI, y que la inteligencia emocional es esencial para manejar las coyunturas del día a día."
+    },
+    {
+      num: 15, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Sesgos Cognitivos y Distorsiones Cognitivas",
+      proceso: "Proceso cognitivo aplicado: Los sesgos cognitivos son atajos mentales que desvían el razonamiento normal; las distorsiones cognitivas son pensamientos extremadamente negativos e irracionales como 'todo el mundo me odia'.",
+      pregunta: `Un joven piensa: "Si no acepto lo que me piden mis compañeros en esta situación de '${TEMA_PROYECTO_AULA}', todo el mundo me va a odiar para siempre". ¿Qué fenómeno del pensamiento está ocurriendo?`,
+      opciones: [
+        "Razonamiento deductivo válido.",
+        "Una distorsión cognitiva (pensamiento extremadamente negativo e irracional derivado de atajos mentales).",
+        "Pensamiento analítico objetivo."
+      ],
+      correcta: 1,
+      retro: "Correcto. Las distorsiones cognitivas son pensamientos extremadamente negativos e irracionales (como 'todo el mundo me odia') que podemos identificar y detener conscientemente."
+    },
+    {
+      num: 16, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Lenguaje y Simbolización (Vygotsky, 1987)",
+      proceso: "Proceso cognitivo aplicado: El lenguaje es un sistema dinámico, cambiante y flexible de signos que media el pensamiento y la conducta, permitiendo codificar y decodificar significados y reconstruir el pensamiento.",
+      pregunta: `Según Vygotsky (1987) y las habilidades cognitivas del manual, ¿por qué ampliar el vocabulario y dominar el lenguaje verbal y no verbal ayuda a prevenir "${TEMA_PROYECTO_AULA}"?`,
+      opciones: [
+        "Porque el lenguaje media el pensamiento y la conducta, permitiendo expresar con precisión ideas y reconstruir el pensamiento.",
+        "Porque el lenguaje es estático y no influye en la comprensión.",
+        "Porque sustituye por completo a la percepción."
+      ],
+      correcta: 0,
+      retro: "Acertado. Vygotsky señala que el lenguaje es una herramienta dinámica de reconstrucción del pensamiento que media la conducta y facilita la comunicación asertiva."
+    },
+    {
+      num: 17, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Comparación (Habilidad Cognitiva 16)",
+      proceso: "Habilidad cognitiva aplicada: Proceso básico basado en la observación que permite establecer relaciones de diferencias o semejanzas entre pares de características de objetos o situaciones correspondientes a una misma variable.",
+      pregunta: `Para evaluar dos grupos de amigos dentro de "${TEMA_PROYECTO_AULA}", observas las semejanzas y diferencias entre ambos usando como variable el "respeto a tus decisiones personales". ¿Qué habilidad cognitiva aplicaste?`,
+      opciones: [
+        "Comparación (establecer semejanzas o diferencias respecto a una misma variable).",
+        "Inhibición motora.",
+        "Memoria sensorial."
+      ],
+      correcta: 0,
+      retro: "Correcto. La comparación establece relaciones de semejanza o diferencia entre pares de características correspondientes a una misma variable."
+    },
+    {
+      num: 18, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Clasificación (Habilidad Cognitiva 17)",
+      proceso: "Habilidad cognitiva aplicada: Agrupar conjuntos de objetos o situaciones de acuerdo con sus semejanzas y diferencias en categorías denominadas 'clases' y establecer categorías conceptuales.",
+      pregunta: `Tras analizar distintas conductas relacionadas con "${TEMA_PROYECTO_AULA}", las agrupas en dos clases: "Conductas de autocuidado" y "Conductas de riesgo social". ¿Qué operación mental realizaste?`,
+      opciones: [
+        "Clasificación (agrupar elementos en clases según semejanzas y diferencias).",
+        "Sensación auditiva.",
+        "Bloqueo perceptual."
+      ],
+      correcta: 0,
+      retro: "Muy bien. La clasificación agrupa conjuntos de elementos en categorías denominadas clases y permite definir conceptos y plantear hipótesis."
+    },
+    {
+      num: 19, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Flexibilidad Cognitiva y Capacidad de Asociación",
+      proceso: "Habilidad cognitiva aplicada: La flexibilidad cognitiva permite adaptarse a nuevas condiciones, modificar esquemas mentales y asumir diferentes perspectivas para entender las motivaciones ajenas.",
+      pregunta: `Un estudiante cambia de entorno escolar para alejarse de "${TEMA_PROYECTO_AULA}" y modifica sus esquemas habituales para entender distintas perspectivas sin rigidez. ¿Qué habilidad cognitiva demuestra?`,
+      opciones: [
+        "Flexibilidad cognitiva (adaptarse a nuevas condiciones y modificar esquemas).",
+        "Rigidez mental y hábito negativo.",
+        "Pensamiento lineal cerrado."
+      ],
+      correcta: 0,
+      retro: "Exacto. La flexibilidad cognitiva permite modificar nuestros esquemas en función de la experiencia y asumir diferentes perspectivas para una mejor socialización."
+    },
+    {
+      num: 20, parcial: "Segundo Parcial", clase: "p2",
+      tema: "Metacognición, Autoconciencia e Inhibición",
+      proceso: "Habilidad cognitiva aplicada: La metacognición es valorar y pensar sobre la propia cognición (analizar qué información nos falta para optimizar capacidades), junto con la autoconciencia (identidad propia) y la inhibición (frenar patrones no efectivos).",
+      pregunta: `Después de ceder una vez ante "${TEMA_PROYECTO_AULA}", te detienes a evaluar cómo pensaste, qué información te faltó analizar y qué estrategias debes mejorar para la próxima ocasión. ¿Qué habilidad cognitiva superior estás aplicando?`,
+      opciones: [
+        "Metacognición (pensar y valorar sobre la propia cognición para optimizarla).",
+        "Sesgo de azar.",
+        "Sensación táctil."
+      ],
+      correcta: 0,
+      retro: "Correcto. La metacognición permite analizar nuestras propias capacidades y conocimientos, detectar qué información nos falta y optimizar nuestro desempeño."
+    },
+
+    // --- TERCER PARCIAL (21 a 30) ---
+    {
+      num: 21, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Creatividad y sus 3 Condiciones",
+      proceso: "Concepto del 3er parcial: Capacidad de producir cosas nuevas y valiosas, resolviendo problemas de forma original. Supone 3 condiciones: 1) producir una idea nueva, 2) resolver un problema o alcanzar una meta, y 3) mantener y desarrollar el conocimiento (originalidad, adaptación y realización).",
+      pregunta: `Diseñas una campaña escolar original para resolver "${TEMA_PROYECTO_AULA}", logras reducir los casos en tu grupo y mantienes el proyecto activo todo el semestre. ¿Por qué cumple con las 3 reglas de la creatividad del manual?`,
+      opciones: [
+        "Porque genera una idea nueva, resuelve un problema concreto y se mantiene/desarrolla en el tiempo (originalidad, adaptación y realización).",
+        "Porque copia exactamente una campaña anterior sin cambios.",
+        "Porque depende exclusivamente de la suerte."
+      ],
+      correcta: 0,
+      retro: "Excelente. La creatividad no se limita a un breve episodio: exige producir una respuesta nueva, resolver un problema/meta y desarrollarla al máximo."
+    },
+    {
+      num: 22, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Los 4 Factores de la Creatividad (Guilford, 1977)",
+      proceso: "Concepto del 3er parcial: Guilford mide la creatividad por 4 factores: Fluidez (cantidad de ideas en un tiempo), Flexibilidad (cambiar de categoría/perspectiva), Originalidad (ideas novedosas poco frecuentes) y Elaboración (perfeccionar y dar complejidad a una idea).",
+      pregunta: `Para escapar con humor e ingenio de una situación incómoda de "${TEMA_PROYECTO_AULA}", generas 15 respuestas distintas en dos minutos (cantidad) y luego perfeccionas una propuesta compleja para integrar a tu grupo. ¿Qué factores de Guilford destacan en esas dos acciones?`,
+      opciones: [
+        "Fluidez (cantidad rápida de ideas) y Elaboración (desarrollar y perfeccionar con complejidad).",
+        "Bloqueo físico y bloqueo cultural.",
+        "Sistema 1 automático."
+      ],
+      correcta: 0,
+      retro: "Correcto. Guilford (1977) define la fluidez como la emisión abundante y rápida de ideas, y la elaboración como la capacidad de perfeccionar una idea alcanzando complejidad y detalle."
+    },
+    {
+      num: 23, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Pensamiento Divergente/Lateral vs. Convergente/Vertical",
+      proceso: "Concepto del 3er parcial: El pensamiento lateral/divergente (De Bono / Guilford) no selecciona un solo camino, sino que explora todos los caminos, reestructura modelos y abre nuevas posibilidades; el vertical/convergente es lineal, selectivo y busca una respuesta única.",
+      pregunta: `Cuando un adolescente cree que en "${TEMA_PROYECTO_AULA}" solo existen dos opciones ("obedecer al grupo o quedarse solo"), está atrapado en un esquema rígido. ¿Qué tipo de pensamiento permite romper ese esquema y encontrar múltiples alternativas nuevas?`,
+      opciones: [
+        "Pensamiento divergente o lateral (reestructuración de modelos y apertura a nuevas posibilidades).",
+        "Pensamiento vertical lineal exclusivo.",
+        "Conducta automatizada."
+      ],
+      correcta: 0,
+      retro: "Muy bien. Edward de Bono y J.P. Guilford señalan que el pensamiento lateral o divergente reestructura los modelos de conceptos y abre múltiples derroteros donde parecía no haber salida."
+    },
+    {
+      num: 24, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Etapas del Proceso Creativo (Hemisferios Izquierdo y Derecho)",
+      proceso: "Concepto del 3er parcial: Secuencia conjunta de ambos hemisferios: 1) Detección de la problemática (hemisferio izquierdo detecta el problema y derecho abre fluidez), 2) Análisis de alternativas e innovación, 3) Inspiración y ejecución de la acción, y 4) Consolidación de la experiencia.",
+      pregunta: `En el ejemplo del manual (calcetín roto en el salón), el hemisferio izquierdo detecta el problema real, evalúa alternativas, se combina con el derecho para pintar el hueco con plumón negro y al final ambos consolidan el aprendizaje. Aplicado a "${TEMA_PROYECTO_AULA}", ¿qué ocurre en la cuarta etapa?`,
+      opciones: [
+        "Se ignora lo sucedido.",
+        "Ambos hemisferios analizan lo ocurrido y consolidan la experiencia para reutilizarla o mejorarla en el futuro.",
+        "Se bloquea toda acción."
+      ],
+      correcta: 1,
+      retro: "Acertado. En la cuarta etapa del proceso creativo, el hemisferio izquierdo evalúa la ejecución y el derecho cómo se siente, consolidando la experiencia para futuras situaciones."
+    },
+    {
+      num: 25, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Bloqueadores de la Creatividad y Zona de Confort",
+      proceso: "Concepto del 3er parcial: Existen bloqueos cognoscitivos, emocionales (miedo, inseguridad, baja autoestima), físicos, culturales ('siempre ha sido así') y perceptuales, además de permanecer en la zona de confort repitiendo hábitos.",
+      pregunta: `Un joven no se atreve a proponer actividades sanas frente a "${TEMA_PROYECTO_AULA}" porque se repite a sí mismo "no puedo, van a burlarse de mí". Según el manual, ¿qué tipo de bloqueo frena su creatividad y acción?`,
+      opciones: [
+        "Bloqueo emocional derivado de baja autoestima y hábitos negativos del pensamiento.",
+        "Bloqueo físico.",
+        "Exceso de pensamiento lateral."
+      ],
+      correcta: 0,
+      retro: "Correcto. Los bloqueos emocionales se expresan con miedo, inseguridad y baja autoestima ('no puedo', '¿qué van a decir?'), paralizando la capacidad de expresar y crear."
+    },
+    {
+      num: 26, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Características de la Personalidad Creativa",
+      proceso: "Concepto del 3er parcial: Incluye actitud abierta y crítica, capacidad para detectar problemas, inconforme, perceptivo, imaginativo, original, fluye, flexibilidad de pensamiento, perseverante, curioso, energético y motivador.",
+      pregunta: `Para vencer los bloqueos ante "${TEMA_PROYECTO_AULA}" y desarrollar una personalidad creativa, ¿cuál de los 10 tips del manual debes aplicar al recibir una propuesta diferente?`,
+      opciones: [
+        "Suspender temporalmente el juicio, salir de la zona de confort y mirar más allá de lo establecido.",
+        "Juzgar de inmediato y esperar a que la suerte resuelva el problema.",
+        "Confiar ciegamente en el estado inicial del problema."
+      ],
+      correcta: 0,
+      retro: "Exacto. Entre los 10 tips para vencer bloqueos están suspender temporalmente el juicio, redefinir la situación, salir de la zona de confort y trabajar sin esperar a la suerte."
+    },
+    {
+      num: 27, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Sistema 1 vs. Sistema 2 (Daniel Kahneman)",
+      proceso: "Concepto del 3er parcial: Sistema 1 (automático, rápido, inconsciente, sin esfuerzo, impulsado por emoción; actúa ~60,000 veces/día) vs. Sistema 2 (manual, pausado, consciente, con esfuerzo, impulsado por la razón).",
+      pregunta: `En el problema del manual (labial + crema = $110; la crema cuesta $100 más que el labial), el Sistema 1 responde rápido "$10", pero el Sistema 2 calcula con esfuerzo que el labial cuesta $5. Ante una decisión crítica de "${TEMA_PROYECTO_AULA}", ¿cómo activas el Sistema 2?`,
+      opciones: [
+        "Respondiendo en menos de un segundo por pura emoción.",
+        "Deteniéndote, tomando lápiz y papel para analizar pausada y racionalmente toda la información disponible.",
+        "Dejando que otros decidan por ti."
+      ],
+      correcta: 1,
+      retro: "Muy bien. El manual recomienda tomar lápiz y papel para frenar las respuestas impulsivas del Sistema 1 y activar el análisis ordenado del Sistema 2."
+    },
+    {
+      num: 28, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Expansión y Contracción de Ideas",
+      proceso: "Concepto del 3er parcial: La expansión permite considerar extremos (ventajas/desventajas), variables, alternativas, consecuencias (corto/largo plazo) y otros puntos de vista. La contracción permite estipular reglas, definir objetivos, considerar prioridades, planificación y decisión.",
+      pregunta: `Antes de tomar una decisión frente a "${TEMA_PROYECTO_AULA}", analizas ventajas y desventajas, consecuencias a corto y largo plazo y la opinión de tu familia; luego defines tus prioridades y eliges un plan. ¿Qué par de procesos aplicaste?`,
+      opciones: [
+        "Expansión de ideas (abrir panorama) seguida de Contracción de ideas (priorizar y decidir).",
+        "Únicamente lluvia de ideas sin evaluación.",
+        "Evitación del problema esperando que se resuelva solo."
+      ],
+      correcta: 0,
+      retro: "Correcto. La expansión amplía la visión considerando extremos, consecuencias y puntos de vista; la contracción enfoca la mente estipulando reglas, prioridades, planificación y decisión."
+    },
+    {
+      num: 29, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Técnica de los Seis Sombreros para Pensar (Edward de Bono)",
+      proceso: "Concepto del 3er parcial: Blanco (hechos y cifras objetivas), Rojo (emociones e intuición), Negro (juicio crítico y riesgos), Amarillo (optimismo y beneficios), Verde (creatividad y alternativas), Azul (control, organización y síntesis).",
+      pregunta: `Al evaluar una decisión compleja sobre "${TEMA_PROYECTO_AULA}", primero revisas datos verificados (Blanco), luego identificas los riesgos y peligros (Negro) y finalmente sintetizas y organizas la conclusión final. ¿Qué color de sombrero cumple esa última función de control y síntesis?`,
+      opciones: [
+        "Sombrero Rojo.",
+        "Sombrero Azul (administra, sintetiza y da conclusiones).",
+        "Sombrero Amarillo."
+      ],
+      correcta: 1,
+      retro: "Excelente. En la técnica de Edward de Bono, el Sombrero Azul se ocupa del control, la organización del proceso, la visión global y la síntesis de conclusiones."
+    },
+    {
+      num: 30, parcial: "Tercer Parcial", clase: "p3",
+      tema: "Proceso de Toma de Decisiones (7 Pasos)",
+      proceso: "Concepto del 3er parcial: 1. Identifica el problema, 2. Recopila información, 3. Desarrolla diferentes alternativas, 4. Evalúa las diferentes opciones, 5. Elige la mejor opción, 6. Llévala a cabo, 7. Revisa el impacto.",
+      pregunta: `Has llegado a la Meta tras resolver "${TEMA_PROYECTO_AULA}" aplicando los 7 pasos del Proceso de Toma de Decisiones. Después de elegir la mejor opción (paso 5) y llevarla a cabo (paso 6), ¿cuál es el séptimo y último paso indispensable para cerrar el ciclo?`,
+      opciones: [
+        "Revisar el impacto de la decisión tomada.",
+        "Volver a empezar sin evaluar resultados.",
+        "Ocultar las consecuencias."
+      ],
+      correcta: 0,
+      retro: "¡Felicidades, completaste el tablero! El paso 7 del modelo de Toma de Decisiones es 'Revisa el impacto', permitiendo verificar si la solución resolvió el problema y aprender del resultado."
+    }
+  ];
+
+  // =========================================================================
+  // LÓGICA DE NAVEGACIÓN, PUNTUACIÓN Y RETROALIMENTACIÓN
+  // =========================================================================
+  let currentPos = 0;
+  let score = 0;
+  const completedSet = new Set();
+
+  function renderBoard() {
+    const grid = document.getElementById("boardGrid");
+    grid.innerHTML = "";
+
+    // Casilla INICIO
+    const startTile = document.createElement("div");
+    startTile.className = "tile special-tile" + (currentPos === 0 ? " current" : "");
+    startTile.innerHTML = `<div class="tile-num">▶ INICIO</div><div class="tile-title">Punto de Partida</div>`;
+    grid.appendChild(startTile);
+
+    // 30 Casillas
+    CASILLAS.forEach(c => {
+      const div = document.createElement("div");
+      div.className = `tile ${c.clase}` +
+        (currentPos === c.num ? " current" : "") +
+        (completedSet.has(c.num) ? " completed" : "");
+      div.onclick = () => openChallenge(c.num);
+      div.innerHTML = `
+        <div>
+          <div class="tile-num">Casilla ${c.num}</div>
+          <div class="tile-tag">${c.parcial}</div>
+        </div>
+        <div class="tile-title">${c.tema}</div>
+      `;
+      grid.appendChild(div);
+    });
+
+    // Casilla META
+    const endTile = document.createElement("div");
+    endTile.className = "tile special-tile" + (currentPos === 31 ? " current" : "");
+    endTile.innerHTML = `<div class="tile-num">🏆 META</div><div class="tile-title">Decisión Fundamentada</div>`;
+    grid.appendChild(endTile);
+
+    document.getElementById("statPos").textContent =
+      currentPos === 0 ? "Inicio" : (currentPos > 30 ? "Meta" : "Casilla " + currentPos);
+    document.getElementById("statDone").textContent = completedSet.size;
+    document.getElementById("statScore").textContent = score;
+  }
+
+  function rollDice() {
+    const step = Math.floor(Math.random() * 6) + 1;
+    let next = currentPos + step;
+    if (next > 30) next = 30;
+    currentPos = next;
+    renderBoard();
+    openChallenge(currentPos);
+  }
+
+  function openChallenge(num) {
+    currentPos = num;
+    renderBoard();
+    const c = CASILLAS.find(item => item.num === num);
+    if (!c) return;
+
+    document.getElementById("mParcial").textContent = `${c.parcial} · Casilla ${c.num} de 30`;
+    document.getElementById("mTitle").textContent = c.tema;
+    document.getElementById("mProcess").innerHTML = `<strong>Aprendizaje / Proceso Cognitivo:</strong> ${c.proceso}`;
+    document.getElementById("mQuestion").textContent = c.pregunta;
+
+    const optContainer = document.getElementById("mOptions");
+    optContainer.innerHTML = "";
+    const fb = document.getElementById("mFeedback");
+    fb.className = "feedback-box";
+    fb.innerHTML = "";
+
+    c.opciones.forEach((texto, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.textContent = `${String.fromCharCode(65 + idx)}) ${texto}`;
+      btn.onclick = () => evaluateAnswer(c, idx, btn);
+      optContainer.appendChild(btn);
+    });
+
+    document.getElementById("challengeModal").classList.add("open");
+  }
+
+  function evaluateAnswer(c, selectedIdx, clickedBtn) {
+    const allBtns = document.querySelectorAll("#mOptions .option-btn");
+    allBtns.forEach((b, i) => {
+      b.disabled = true;
+      if (i === c.correcta) b.classList.add("correct");
+    });
+
+    const fb = document.getElementById("mFeedback");
+    if (selectedIdx === c.correcta) {
+      if (!completedSet.has(c.num)) {
+        completedSet.add(c.num);
+        score += 10;
+      }
+      fb.className = "feedback-box show ok";
+      fb.innerHTML = `<strong>¡Respuesta Correcta! (+10 pts)</strong><br>${c.retro}`;
+    } else {
+      clickedBtn.classList.add("wrong");
+      fb.className = "feedback-box show bad";
+      fb.innerHTML = `<strong>Revisa el fundamento cognitivo:</strong><br>${c.retro}`;
+    }
+    renderBoard();
+  }
+
+  function openInfoModal(type) {
+    const title = document.getElementById("infoTitle");
+    const body = document.getElementById("infoBody");
+
+    if (type === "objetivo") {
+      title.textContent = "Objetivo del Tablero Digital Interactivo";
+      body.innerHTML = `
+        <p>Integrar y aplicar de manera práctica los aprendizajes de los <strong>tres parciales</strong> de <em>Desarrollo de Habilidades del Pensamiento I</em> (fundamentos del pensamiento, procesos cognitivos, creatividad y toma de decisiones) para analizar y resolver situaciones reales vinculadas con la problemática de Proyecto Aula: <strong>${TEMA_PROYECTO_AULA}</strong>.</p>
+      `;
+    } else if (type === "instrucciones") {
+      title.textContent = "Instrucciones, Reglas y Criterios de Avance";
+      body.innerHTML = `
+        <ol>
+          <li><strong>Recorrido de 30 casillas:</strong> El tablero consta de 30 retos distribuidos en tres bloques: <strong>Casillas 1–8</strong> (Primer Parcial), <strong>Casillas 9–20</strong> (Segundo Parcial) y <strong>Casillas 21–30</strong> (Tercer Parcial).</li>
+          <li><strong>Modos de navegación:</strong> Puedes avanzar usando el botón <strong>"Tirar Dado"</strong> o hacer clic directamente en cualquier casilla numerada (1 a 30) para explorar y resolver su reto.</li>
+          <li><strong>Mecánica por casilla:</strong> Lee el proceso cognitivo identificado, analiza el caso vinculado a Proyecto Aula y selecciona una alternativa. Recibirás retroalimentación inmediata fundamentada en el manual del curso.</li>
+          <li><strong>Puntuación y conclusión:</strong> Cada casilla resuelta correctamente suma <strong>10 puntos</strong> (máximo 300 puntos). Al completar las 30 casillas y llegar a la <strong>Meta</strong>, habrás concluido el recorrido formativo.</li>
+        </ol>
+      `;
+    } else if (type === "creditos") {
+      title.textContent = "Créditos y Fundamentación Académica";
+      body.innerHTML = `
+        <p><strong>Elaborado por:</strong> ${AUTOR_PROYECTO}</p>
+        <p><strong>Institución:</strong> ${GRUPO_INSTITUCION}</p>
+        <p><strong>Unidad de Aprendizaje:</strong> Desarrollo de Habilidades del Pensamiento I · Evidencia Integradora Final del Semestre (Proyecto Aula).</p>
+        <p><strong>Base teórica:</strong> Manual de Desarrollo de Habilidades del Pensamiento I (Kantor, 1924; Morris &amp; Maisto, 2005; MacLean; Vygotsky, 1987; Gardner; Guilford, 1977; De Bono, 1986; Kahneman, 2012; Bezanilla et al., 2018).</p>
+      `;
+    }
+    document.getElementById("infoModal").classList.add("open");
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove("open");
+  }
+
+  function resetGame() {
+    currentPos = 0;
+    score = 0;
+    completedSet.clear();
+    renderBoard();
+  }
+
+  renderBoard();
+</script>
+</body>
+</html>
